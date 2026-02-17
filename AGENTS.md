@@ -16,5 +16,4 @@ When the user says **"deploy"**, do the following:
    - Replace: `ssh paropal 'set -euo pipefail; chmod 0755 /home/protected/daemon.new; mv /home/protected/daemon.new /home/protected/daemon'`
 
 4. Then **tell the user to run** the shutdown endpoint (bearer token required) to trigger a supervised restart:
-   - On the host: `curl -fsS -X POST http://127.0.0.1:8080/shutdown -H "Authorization: Bearer $SHUTDOWN_BEARER_TOKEN"`
-
+   - From anywhere (public URL): `curl -fsS -X POST https://858.nfshost.com/shutdown -H "Authorization: Bearer $SHUTDOWN_BEARER_TOKEN"`
