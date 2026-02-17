@@ -153,3 +153,10 @@ curl -s -X POST \
 - Request timeout to Vultr: 10 seconds.
 - Instance lookup calls `GET /instances?per_page=100` and follows cursor pagination.
 - Non-2xx Vultr responses are treated as failures and mapped to API error responses above.
+
+## Scheduled Cleanup Behavior
+
+- The daemon runs a scheduled "destroy all instances" reconciliation at `00:10` in `Asia/Seoul` (KST).
+- Cleanup is only allowed within the window `00:00 <= time < 07:00` KST.
+- A hard cutoff at `07:00` KST stops further list/delete/retry operations for that day's run.
+- While inside the window, cleanup retries until no instances remain or the cutoff is reached.
