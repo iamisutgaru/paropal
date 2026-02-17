@@ -218,7 +218,7 @@ Inside the instance, the retrying init waits for `/dev/vdb1`, then:
   - `codex_auth.json` -> `/home/linuxuser/.codex/auth.json`
   - `gh_hosts.yml` -> `/home/linuxuser/.config/gh/hosts.yml`
   - `config`, `id_ed25519`, `id_ed25519.pub` -> `/home/linuxuser/.ssh/...`
-- Installs dev conveniences (after block init succeeds): `git`, `ripgrep`, `fd`, Node.js 22, Go 1.26.x, `gh`, `uv`, and `codex`.
+- Installs dev conveniences (after block init succeeds): `git`, `ripgrep`, `fd`, `tmux` (with `set -g mouse on`), Node.js 22, Go 1.26.x, `gh`, `uv`, and `codex`.
 
 ### Provision Retry Behavior
 

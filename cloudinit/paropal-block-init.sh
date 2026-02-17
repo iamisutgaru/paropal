@@ -111,6 +111,7 @@ install_base_packages() {
     gnupg \
     jq \
     ripgrep \
+    tmux \
     xz-utils
 }
 
@@ -199,6 +200,45 @@ ensure_profile_path() {
   chown "${USER_NAME}:${USER_NAME}" "$profile"
 }
 
+configure_tmux() {
+  local home tmuxconf
+  home="$(user_home)"
+  tmuxconf="${home}/.tmux.conf"
+
+  touch "$tmuxconf"
+  chown "${USER_NAME}:${USER_NAME}" "$tmuxconf"
+  chmod 0644 "$tmuxconf"
+
+  ensure_line_in_file 'set -g mouse on' "$tmuxconf"
+}
+
+configure_tmux_autostart() {
+  local home bashrc
+  home="$(user_home)"
+  bashrc="${home}/.bashrc"
+
+  touch "$bashrc"
+  chown "${USER_NAME}:${USER_NAME}" "$bashrc"
+  chmod 0644 "$bashrc"
+
+  if grep -qF "# >>> paropal tmux >>>" "$bashrc"; then
+    return 0
+  fi
+
+  cat >>"$bashrc" <<'EOF'
+
+# >>> paropal tmux >>>
+# Auto-start tmux for interactive SSH sessions (TTY allocated).
+# This avoids breaking scp/rsync/remote commands (no TTY) and prevents nested tmux shells.
+if [ -n "${SSH_TTY:-}" ] && [ -z "${TMUX:-}" ] && command -v tmux >/dev/null 2>&1; then
+  exec tmux new-session -A -s paropal
+fi
+# <<< paropal tmux <<<
+EOF
+
+  chown "${USER_NAME}:${USER_NAME}" "$bashrc"
+}
+
 install_uv_for_user() {
   local home
   home="$(user_home)"
@@ -247,6 +287,8 @@ main() {
     install_uv_for_user
     install_codex_for_user
     ensure_profile_path
+    configure_tmux
+    configure_tmux_autostart
     touch "$DEV_DONE_MARKER"
     log "Dev-init stage complete"
   fi
@@ -258,4 +300,3 @@ main() {
 }
 
 main "$@"
-
