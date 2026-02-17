@@ -1,0 +1,19 @@
+# Go build artifacts
+/daemon
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage output
+*.test
+*.out
+coverage.out
+
+# Environment and local secrets
+.env
+.env.*
+
+# Logs
+*.log
