@@ -95,6 +95,82 @@ func TestFirstCleanupRunTimeKST(t *testing.T) {
 	}
 }
 
+func TestNextProvisionTimeKST(t *testing.T) {
+	loc, err := time.LoadLocation(cleanupTimeZone)
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		now  time.Time
+		want time.Time
+	}{
+		{
+			name: "before scheduled time schedules same day",
+			now:  time.Date(2026, time.February, 17, 7, 9, 59, 0, loc),
+			want: time.Date(2026, time.February, 17, 7, 10, 0, 0, loc),
+		},
+		{
+			name: "exact scheduled time schedules next day",
+			now:  time.Date(2026, time.February, 17, 7, 10, 0, 0, loc),
+			want: time.Date(2026, time.February, 18, 7, 10, 0, 0, loc),
+		},
+		{
+			name: "after scheduled time schedules next day",
+			now:  time.Date(2026, time.February, 17, 15, 0, 0, 0, loc),
+			want: time.Date(2026, time.February, 18, 7, 10, 0, 0, loc),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := nextProvisionTimeKST(tt.now, loc)
+			if !got.Equal(tt.want) {
+				t.Fatalf("nextProvisionTimeKST() = %s, want %s", got.Format(time.RFC3339), tt.want.Format(time.RFC3339))
+			}
+		})
+	}
+}
+
+func TestFirstProvisionRunTimeKST(t *testing.T) {
+	loc, err := time.LoadLocation(cleanupTimeZone)
+	if err != nil {
+		t.Fatalf("load location: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		now  time.Time
+		want time.Time
+	}{
+		{
+			name: "before scheduled time waits for 07:10",
+			now:  time.Date(2026, time.February, 17, 7, 0, 0, 0, loc),
+			want: time.Date(2026, time.February, 17, 7, 10, 0, 0, loc),
+		},
+		{
+			name: "after scheduled time runs immediately",
+			now:  time.Date(2026, time.February, 17, 7, 11, 0, 0, loc),
+			want: time.Date(2026, time.February, 17, 7, 11, 0, 0, loc),
+		},
+		{
+			name: "late in day runs immediately",
+			now:  time.Date(2026, time.February, 17, 23, 59, 0, 0, loc),
+			want: time.Date(2026, time.February, 17, 23, 59, 0, 0, loc),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := firstProvisionRunTimeKST(tt.now, loc)
+			if !got.Equal(tt.want) {
+				t.Fatalf("firstProvisionRunTimeKST() = %s, want %s", got.Format(time.RFC3339), tt.want.Format(time.RFC3339))
+			}
+		})
+	}
+}
+
 func TestIsWithinCleanupWindow(t *testing.T) {
 	loc, err := time.LoadLocation(cleanupTimeZone)
 	if err != nil {

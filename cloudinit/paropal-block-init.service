@@ -1,0 +1,8 @@
+[Unit]
+Description=Paropal block storage + dev initialization (retry until done)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/paropal-block-init.sh linuxuser

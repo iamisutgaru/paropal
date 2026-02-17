@@ -1,0 +1,45 @@
+#cloud-config
+package_update: true
+
+packages:
+  - openssh-server
+  - ufw
+  - libpam-google-authenticator
+  - fail2ban
+  - locales
+  - tzdata
+
+timezone: "{{ .Timezone }}"
+locale: "{{ .Locale }}"
+
+write_files:
+  - path: /usr/local/sbin/paropal-base-init.sh
+    owner: root:root
+    permissions: "0755"
+    content: |
+{{ .BaseInitScript | indent 6 }}
+
+  - path: /usr/local/sbin/paropal-block-init.sh
+    owner: root:root
+    permissions: "0755"
+    content: |
+{{ .BlockInitScript | indent 6 }}
+
+  - path: /etc/systemd/system/paropal-block-init.service
+    owner: root:root
+    permissions: "0644"
+    content: |
+{{ .BlockInitService | indent 6 }}
+
+  - path: /etc/systemd/system/paropal-block-init.timer
+    owner: root:root
+    permissions: "0644"
+    content: |
+{{ .BlockInitTimer | indent 6 }}
+
+runcmd:
+  - [ bash, -lc, "/usr/local/sbin/paropal-base-init.sh {{ .PrimaryUser }}" ]
+  - [ bash, -lc, "systemctl daemon-reload" ]
+  - [ bash, -lc, "systemctl enable --now paropal-block-init.timer" ]
+
+final_message: "Paropal base init applied (SSH 443 + pubkey OR TOTP + UFW + fail2ban). Block/dev init will retry until /dev/vdb1 is attached."

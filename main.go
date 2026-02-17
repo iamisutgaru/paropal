@@ -30,6 +30,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	labelLoc, err := time.LoadLocation(labelTimeZone)
+	if err != nil {
+		logger.Error("failed to load label timezone", "timezone", labelTimeZone, "error", err)
+		os.Exit(1)
+	}
+
 	backgroundCtx, stopBackground := context.WithCancel(context.Background())
 
 	a := &app{
@@ -38,10 +44,13 @@ func main() {
 		shutdownToken:             shutdownToken,
 		stopBackground:            stopBackground,
 		cleanupLoc:                cleanupLoc,
+		labelLoc:                  labelLoc,
 		cleanupSettleDelay:        defaultCleanupSettleDelay,
 		cleanupBackoffMin:         defaultCleanupBackoffMin,
 		cleanupBackoffMax:         defaultCleanupBackoffMax,
 		cleanupPassDeleteInterval: defaultCleanupPassDeleteInterval,
+		provisionBackoffMin:       defaultProvisionBackoffMin,
+		provisionBackoffMax:       defaultProvisionBackoffMax,
 	}
 
 	mux := http.NewServeMux()
@@ -57,6 +66,7 @@ func main() {
 	a.server = server
 
 	go a.runDailyCleanup(backgroundCtx)
+	go a.runDailyProvision(backgroundCtx)
 
 	logger.Info("starting daemon", "addr", listenAddr)
 	err = server.ListenAndServe()
