@@ -12,6 +12,7 @@ import (
 type provisionRunState struct {
 	instanceID string
 	label      string
+	reinstall  bool
 }
 
 func (a *app) runDailyProvision(ctx context.Context) {
@@ -113,6 +114,7 @@ func (a *app) reconcileEnsureParopalInstance(ctx context.Context) {
 func (a *app) ensureParopalInstanceAndBlock(ctx context.Context, state *provisionRunState) error {
 	// If we already created an instance in this run, don't create another one just because list endpoints are lagging.
 	if state != nil && strings.TrimSpace(state.instanceID) != "" {
+		attachRequested := true
 		attachErr := a.vultr.attachBlockStorage(ctx, provisionBlockStorageID, state.instanceID, provisionBlockAttachLive)
 		if attachErr != nil {
 			if isBlockAlreadyAttachedError(attachErr) {
@@ -120,16 +122,30 @@ func (a *app) ensureParopalInstanceAndBlock(ctx context.Context, state *provisio
 					"block_storage_id", provisionBlockStorageID,
 					"instance_id", state.instanceID,
 				)
-				return nil
+				attachRequested = false
+			} else {
+				return fmt.Errorf("attach block storage: %w", attachErr)
 			}
-			return fmt.Errorf("attach block storage: %w", attachErr)
 		}
 
-		a.logger.Info("block storage attach requested",
-			"block_storage_id", provisionBlockStorageID,
-			"instance_id", state.instanceID,
-			"live", provisionBlockAttachLive,
-		)
+		if attachRequested {
+			a.logger.Info("block storage attach requested",
+				"block_storage_id", provisionBlockStorageID,
+				"instance_id", state.instanceID,
+				"live", provisionBlockAttachLive,
+			)
+		}
+
+		if provisionReinstallAfterCreate && !state.reinstall {
+			if err := a.vultr.reinstallInstance(ctx, state.instanceID); err != nil {
+				return fmt.Errorf("reinstall instance: %w", err)
+			}
+			state.reinstall = true
+			a.logger.Warn("requested instance reinstall after create",
+				"instance_id", state.instanceID,
+				"label", state.label,
+			)
+		}
 		return nil
 	}
 
@@ -170,15 +186,16 @@ func (a *app) ensureParopalInstanceAndBlock(ctx context.Context, state *provisio
 			return fmt.Errorf("create instance: %w", err)
 		}
 
-		createdNow = true
-		if state != nil {
-			state.instanceID = instanceID
-			state.label = label
-		}
-		instance = &vultrInstance{
-			ID:    instanceID,
-			Label: label,
-		}
+			createdNow = true
+			if state != nil {
+				state.instanceID = instanceID
+				state.label = label
+				state.reinstall = false
+			}
+			instance = &vultrInstance{
+				ID:    instanceID,
+				Label: label,
+			}
 		a.logger.Warn("created new instance",
 			"instance_id", instanceID,
 			"label", label,
@@ -209,6 +226,17 @@ func (a *app) ensureParopalInstanceAndBlock(ctx context.Context, state *provisio
 		"instance_id", instance.ID,
 		"live", provisionBlockAttachLive,
 	)
+
+	if createdNow && state != nil && provisionReinstallAfterCreate && !state.reinstall {
+		if err := a.vultr.reinstallInstance(ctx, instance.ID); err != nil {
+			return fmt.Errorf("reinstall instance: %w", err)
+		}
+		state.reinstall = true
+		a.logger.Warn("requested instance reinstall after create",
+			"instance_id", instance.ID,
+			"label", instance.Label,
+		)
+	}
 	return nil
 }
 

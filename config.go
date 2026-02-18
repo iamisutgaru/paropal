@@ -34,6 +34,7 @@ const (
 	provisionSSHKeyID                = "c426659e-454e-40de-8a8b-6b9820fe72f2"
 	provisionBlockStorageID          = "52cb7c3a-42fd-47e1-b120-6e8cf6b2ddd1"
 	provisionBlockAttachLive         = false
+	provisionReinstallAfterCreate    = true
 	provisionPrimaryUser             = "linuxuser"
 	defaultCleanupSettleDelay        = 20 * time.Second
 	defaultCleanupBackoffMin         = 15 * time.Second

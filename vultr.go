@@ -103,6 +103,15 @@ func (c *vultrClient) deleteInstance(ctx context.Context, instanceID string) err
 	return c.do(ctx, http.MethodDelete, path, nil)
 }
 
+func (c *vultrClient) reinstallInstance(ctx context.Context, instanceID string) error {
+	if strings.TrimSpace(instanceID) == "" {
+		return errors.New("instance id cannot be empty")
+	}
+
+	path := "/instances/" + url.PathEscape(instanceID) + "/reinstall"
+	return c.doJSON(ctx, http.MethodPost, path, struct{}{}, nil)
+}
+
 type createInstanceRequest struct {
 	Region     string   `json:"region"`
 	Plan       string   `json:"plan"`

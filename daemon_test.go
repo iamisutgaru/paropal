@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"sort"
 	"strings"
 	"sync"
@@ -525,6 +527,88 @@ func TestReconcileStopsAtCutoff(t *testing.T) {
 	}
 	if st.deleteCalls != 0 {
 		t.Fatalf("expected 0 delete calls after cutoff, got %d", st.deleteCalls)
+	}
+}
+
+func TestEnsureParopalInstanceAndBlockReinstallsAfterCreate(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mu    sync.Mutex
+		calls []string
+	)
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		calls = append(calls, r.Method+" "+r.URL.Path)
+		mu.Unlock()
+
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/v2/instances":
+			writeJSON(w, http.StatusOK, listInstancesResponse{Instances: nil})
+			return
+		case r.Method == http.MethodPost && r.URL.Path == "/v2/instances":
+			var req createInstanceRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode create request: %v", err)
+			}
+			if strings.TrimSpace(req.UserData) == "" {
+				t.Fatalf("expected non-empty user_data in create request")
+			}
+			writeJSON(w, http.StatusCreated, createInstanceResponse{
+				Instance: struct {
+					ID string `json:"id"`
+				}{ID: "inst-123"},
+			})
+			return
+		case r.Method == http.MethodPost && r.URL.Path == "/v2/blocks/"+provisionBlockStorageID+"/attach":
+			var req attachBlockRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				t.Fatalf("decode attach request: %v", err)
+			}
+			if req.InstanceID != "inst-123" {
+				t.Fatalf("attach request instance_id=%q, want %q", req.InstanceID, "inst-123")
+			}
+			w.WriteHeader(http.StatusNoContent)
+			return
+		case r.Method == http.MethodPost && r.URL.Path == "/v2/instances/inst-123/reinstall":
+			w.WriteHeader(http.StatusNoContent)
+			return
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	a := &app{
+		vultr:    newTestVultrClient(server),
+		logger:   testLogger(),
+		labelLoc: time.UTC,
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	var state provisionRunState
+	if err := a.ensureParopalInstanceAndBlock(ctx, &state); err != nil {
+		t.Fatalf("ensureParopalInstanceAndBlock() error = %v", err)
+	}
+	if state.instanceID != "inst-123" {
+		t.Fatalf("state.instanceID=%q, want %q", state.instanceID, "inst-123")
+	}
+
+	mu.Lock()
+	got := append([]string(nil), calls...)
+	mu.Unlock()
+
+	want := []string{
+		"GET /v2/instances",
+		"POST /v2/instances",
+		"POST /v2/blocks/" + provisionBlockStorageID + "/attach",
+		"POST /v2/instances/inst-123/reinstall",
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("unexpected call sequence:\n got: %#v\nwant: %#v", got, want)
 	}
 }
 
