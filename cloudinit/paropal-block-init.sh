@@ -197,7 +197,7 @@ ensure_profile_path() {
   home="$(user_home)"
   profile="${home}/.profile"
 
-  # npm/uv installs to $HOME/.local/bin; ensure it exists for login shells and tool installs.
+  # Ensure user-level tool installs are on PATH for login shells.
   install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.local/bin"
 
   ensure_line_in_file 'export PATH="/usr/local/go/bin:$PATH"' "$profile"
@@ -244,32 +244,6 @@ EOF
   chown "${USER_NAME}:${USER_NAME}" "$bashrc"
 }
 
-install_uv_for_user() {
-  local home
-  home="$(user_home)"
-
-  if [[ -x "${home}/.local/bin/uv" ]]; then
-    return 0
-  fi
-
-  log "Installing uv for ${USER_NAME}"
-  install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.local/bin"
-  runuser -l "${USER_NAME}" -c 'export UV_UNMANAGED_INSTALL="$HOME/.local/bin"; curl -LsSf https://astral.sh/uv/install.sh | sh'
-}
-
-install_codex_for_user() {
-  local home
-  home="$(user_home)"
-
-  if [[ -x "${home}/.local/bin/codex" ]]; then
-    return 0
-  fi
-
-  log "Installing @openai/codex for ${USER_NAME}"
-  install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.local/bin"
-  runuser -l "${USER_NAME}" -c 'npm install -g --prefix "$HOME/.local" @openai/codex'
-}
-
 main() {
   mkdir -p "$STATE_DIR"
 
@@ -289,8 +263,6 @@ main() {
     install_node_22
     install_go_126
     install_gh
-    install_uv_for_user
-    install_codex_for_user
     ensure_profile_path
     configure_tmux
     configure_tmux_autostart
