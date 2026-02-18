@@ -48,7 +48,8 @@ const rootHTML = `<!doctype html>
     <section>
       <h2>Commands</h2>
       <pre><code>curl -LsSf https://astral.sh/uv/install.sh | sh</code></pre>
-      <pre><code>npm i -g @openai/codex</code></pre>
+      <pre><code>sudo npm i -g @openai/codex</code></pre>
+      <pre><code>codex --dangerously-bypass-approvals-and-sandbox --search</code></pre>
     </section>
   </main>
 
