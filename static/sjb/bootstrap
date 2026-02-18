@@ -3,9 +3,6 @@
 mkdir -p "$HOME"/.local/share/fonts
 wget 'https://github.com/slavfox/cozette/releases/latest/download/CozetteVector.ttf' -O "$HOME"/.local/share/fonts/CozetteVector.ttf
 
-cp -r ./ssh "$HOME"/.ssh
-chmod 600 "$HOME"/.ssh/LightsailDefaultKey-ap-northeast-2.pem
-
 xmodmap ./xmodmaprc
 # git clone 'https://github.com/alols/xcape.git' && cd xcape
 # make
