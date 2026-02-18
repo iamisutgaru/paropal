@@ -32,7 +32,8 @@ ensure_line_in_file() {
 
 is_mounted() {
   if command -v findmnt >/dev/null 2>&1; then
-    findmnt -rn --target "$MNT" >/dev/null 2>&1
+    # --target returns the filesystem that contains the path (often /), not whether the path is a mountpoint.
+    findmnt -rn --mountpoint "$MNT" >/dev/null 2>&1
     return $?
   fi
   mountpoint -q "$MNT"
@@ -83,7 +84,8 @@ copy_block_secrets() {
 
   mkdir -p "${home}/.ssh" "${home}/.config/gh" "${home}/.codex"
   chown -R "${USER_NAME}:${USER_NAME}" "${home}/.ssh" "${home}/.config" "${home}/.codex"
-  chmod 0700 "${home}/.ssh" "${home}/.config" "${home}/.codex"
+  chmod 0700 "${home}/.ssh" "${home}/.codex"
+  chmod 0755 "${home}/.config"
   chmod 0700 "${home}/.config/gh"
 
   copy_secret "${MNT}/codex_auth.json" "${home}/.codex/auth.json" 0600 "${USER_NAME}" "${USER_NAME}"
@@ -195,6 +197,9 @@ ensure_profile_path() {
   home="$(user_home)"
   profile="${home}/.profile"
 
+  # npm/uv installs to $HOME/.local/bin; ensure it exists for login shells and tool installs.
+  install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.local/bin"
+
   ensure_line_in_file 'export PATH="/usr/local/go/bin:$PATH"' "$profile"
   ensure_line_in_file 'export PATH="$HOME/.local/bin:$PATH"' "$profile"
   chown "${USER_NAME}:${USER_NAME}" "$profile"
@@ -248,8 +253,8 @@ install_uv_for_user() {
   fi
 
   log "Installing uv for ${USER_NAME}"
-  runuser -u "${USER_NAME}" -- env UV_UNMANAGED_INSTALL="${home}/.local/bin" \
-    sh -lc 'curl -LsSf https://astral.sh/uv/install.sh | sh'
+  install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.local/bin"
+  runuser -l "${USER_NAME}" -c 'export UV_UNMANAGED_INSTALL="$HOME/.local/bin"; curl -LsSf https://astral.sh/uv/install.sh | sh'
 }
 
 install_codex_for_user() {
@@ -261,8 +266,8 @@ install_codex_for_user() {
   fi
 
   log "Installing @openai/codex for ${USER_NAME}"
-  runuser -u "${USER_NAME}" -- \
-    npm install -g --prefix "${home}/.local" @openai/codex
+  install -d -m 0755 -o "${USER_NAME}" -g "${USER_NAME}" "${home}/.local/bin"
+  runuser -l "${USER_NAME}" -c 'npm install -g --prefix "$HOME/.local" @openai/codex'
 }
 
 main() {
