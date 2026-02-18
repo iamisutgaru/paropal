@@ -54,9 +54,11 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /charges", a.handleCharges)
-	mux.HandleFunc("GET /instance", a.handleInstance)
-	mux.HandleFunc("POST /shutdown", a.handleShutdown)
+	mux.HandleFunc("GET /", a.handleRoot)
+	mux.HandleFunc("GET /static/sjb.tar.gz", a.handleSjbTar)
+	mux.HandleFunc("GET /api/charges", a.handleCharges)
+	mux.HandleFunc("GET /api/instance", a.handleInstance)
+	mux.HandleFunc("POST /api/shutdown", a.handleShutdown)
 
 	server := &http.Server{
 		Addr:              listenAddr,

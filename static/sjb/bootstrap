@@ -1,0 +1,20 @@
+#!/bin/sh
+
+mkdir -p "$HOME"/.local/share/fonts
+wget 'https://github.com/slavfox/cozette/releases/latest/download/CozetteVector.ttf' -O "$HOME"/.local/share/fonts/CozetteVector.ttf
+
+cp -r ./ssh "$HOME"/.ssh
+chmod 600 "$HOME"/.ssh/LightsailDefaultKey-ap-northeast-2.pem
+
+xmodmap ./xmodmaprc
+# git clone 'https://github.com/alols/xcape.git' && cd xcape
+# make
+# ./xcape -t 125 -e 'Control_L=Escape'
+# cd ..
+
+cd ./st
+make
+tic -sx ./st.info
+cd ..
+
+printf '%s\n' 's() { ssh -L 8080:localhost:8080 -o StrictHostKeychecking=no "$@"; }' >> "$HOME"/.bashrc

@@ -17,3 +17,6 @@ coverage.out
 
 # Logs
 *.log
+
+# Generated static bundle
+/static/sjb.tar.gz

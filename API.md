@@ -5,9 +5,10 @@ This document describes the HTTP API exposed by the `daemon` binary, plus its sc
 ## Overview
 
 - Listen address: `:8080`
-- Base URL (local): `http://localhost:8080`
+- Base URL (local): `http://localhost:8080/api`
 - Response format: `application/json`
 - Upstream provider: Vultr API (`https://api.vultr.com/v2`)
+- Root path `/` serves a minimal HTML status page (non-API).
 
 ## Required Environment Variables
 
@@ -18,7 +19,7 @@ If either variable is missing, the daemon exits at startup.
 
 ## Authentication
 
-Only `POST /shutdown` is authenticated.
+Only `POST /api/shutdown` is authenticated.
 
 - Header: `Authorization: Bearer <token>`
 - `<token>` must exactly match `SHUTDOWN_BEARER_TOKEN`.
@@ -29,7 +30,7 @@ Only `POST /shutdown` is authenticated.
 
 ## Endpoints
 
-### `GET /charges`
+### `GET /api/charges`
 
 Returns pending account charges from Vultr.
 
@@ -57,10 +58,10 @@ Returns pending account charges from Vultr.
 #### Example
 
 ```bash
-curl -s http://localhost:8080/charges
+curl -s http://localhost:8080/api/charges
 ```
 
-### `GET /instance`
+### `GET /api/instance`
 
 Returns a Vultr instance whose label starts with `paropal-`.
 
@@ -103,10 +104,10 @@ If multiple instances match, the daemon selects a "best" candidate:
 #### Example
 
 ```bash
-curl -s http://localhost:8080/instance
+curl -s http://localhost:8080/api/instance
 ```
 
-### `POST /shutdown`
+### `POST /api/shutdown`
 
 Triggers graceful server shutdown. Authentication required.
 
@@ -150,7 +151,7 @@ The daemon then begins graceful shutdown with a 15 second timeout.
 ```bash
 curl -s -X POST \
   -H "Authorization: Bearer ${SHUTDOWN_BEARER_TOKEN}" \
-  http://localhost:8080/shutdown
+  http://localhost:8080/api/shutdown
 ```
 
 ## Upstream Vultr Behavior
