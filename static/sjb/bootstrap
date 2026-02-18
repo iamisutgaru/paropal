@@ -14,4 +14,43 @@ make
 tic -sx ./st.info
 cd ..
 
-printf '%s\n' 's() { ssh -L 8080:localhost:8080 -o StrictHostKeychecking=no "$@"; }' >> "$HOME"/.bashrc
+if ! grep -qF '# >>> paropal s >>>' "$HOME"/.bashrc 2>/dev/null; then
+  cat >>"$HOME"/.bashrc <<'EOF'
+
+# >>> paropal s >>>
+# SSH helper: resolves the current managed instance IP via the daemon API.
+s() {
+  api='https://858.nfshost.com/api/instance'
+
+  if command -v curl >/dev/null 2>&1; then
+    body="$(curl -fsS "$api")" || return 1
+  else
+    body="$(wget -qO- "$api")" || return 1
+  fi
+
+  if command -v python3 >/dev/null 2>&1; then
+    ip="$(printf '%s' "$body" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ip",""))')"
+  elif command -v python >/dev/null 2>&1; then
+    ip="$(printf '%s' "$body" | python -c 'import json,sys; print(json.load(sys.stdin).get("ip",""))')"
+  elif command -v jq >/dev/null 2>&1; then
+    ip="$(printf '%s' "$body" | jq -r '.ip // ""')"
+  else
+    echo "missing json parser (need python3/python/jq)" >&2
+    return 1
+  fi
+
+  if [ -z "$ip" ]; then
+    echo "no instance IP returned from $api" >&2
+    return 1
+  fi
+
+  ssh -p 443 \
+    -o PubkeyAuthentication=no \
+    -o PasswordAuthentication=no \
+    -o PreferredAuthentications=keyboard-interactive \
+    -o StrictHostKeyChecking=accept-new \
+    linuxuser@"$ip" "$@"
+}
+# <<< paropal s <<<
+EOF
+fi
